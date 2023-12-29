@@ -1,0 +1,162 @@
+repos:
+  - repo: https://github.com/gruntwork-io/pre-commit
+    rev: v0.1.22 # Get the latest from: https://github.com/gruntwork-io/pre-commit/releases
+    hooks:
+      - id: terraform-fmt
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.83.5
+    hooks:
+      - id: terraform_validate
+        args:
+          - --hook-config=--retry-once-with-cleanup=true
+      - id: terraform_tflint
+        args:
+          - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
+          - --hook-config=--delegate-chdir
+        always_run: true
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-json
+      - id: check-toml
+      - id: no-commit-to-branch
+
+  - repo: https://github.com/terraform-docs/terraform-docs
+    rev: "v0.17.0"
+    hooks:
+      - id: terraform-docs-system
+        name: "Run terraform-docs for aws-load-balancer-controller"
+        files: "^aws-load-balancer-controller/.+"
+        args: ["aws-load-balancer-controller"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for bottlerocket-managed-node-group"
+        files: "^bottlerocket-managed-node-group/.+"
+        args: ["bottlerocket-managed-node-group"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for cert-manager"
+        files: "^cert-manager/.+"
+        args: ["cert-manager"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for eks-cloudwatch-container-insights"
+        files: "^eks-cloudwatch-container-insights/.+"
+        args: ["eks-cloudwatch-container-insights"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for eks-cluster"
+        files: "^eks-cluster/.+"
+        args: ["eks-cluster"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for eks-cluster-aws-auth"
+        files: "^eks-cluster-aws-auth/.+"
+        args: ["eks-cluster-aws-auth"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for eks-ebs-csi-driver-managed-add-on"
+        files: "^eks-ebs-csi-driver-managed-add-on/.+"
+        args: ["eks-ebs-csi-driver-managed-add-on"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for eks-fargate-profile"
+        files: "^eks-fargate-profile/.+"
+        args: ["eks-fargate-profile"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for eks-iam-role-for-service-account"
+        files: "^eks-iam-role-for-service-account/.+"
+        args: ["eks-iam-role-for-service-account"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for eks-vpc"
+        files: "^eks-vpc/.+"
+        args: ["eks-vpc"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for elb-nginx-ingress-controller"
+        files: "^elb-nginx-ingress-controller/.+"
+        args: ["elb-nginx-ingress-controller"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for flagger"
+        files: "^flagger/.+"
+        args: ["flagger"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for gitlab-application-k8s-namespace"
+        files: "^gitlab-application-k8s-namespace/.+"
+        args: ["gitlab-application-k8s-namespace"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for gitlab-application-vault-k8s-auth-role"
+        files: "^gitlab-application-vault-k8s-auth-role/.+"
+        args: ["gitlab-application-vault-k8s-auth-role"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for gitlab-k8s-agent"
+        files: "^gitlab-k8s-agent/.+"
+        args: ["gitlab-k8s-agent"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for gitlab-k8s-runner-executor"
+        files: "^gitlab-k8s-runner-executor/.+"
+        args: ["gitlab-k8s-runner-executor"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for gitlab-k8s-runner-executor-namespace"
+        files: "^gitlab-k8s-runner-executor-namespace/.+"
+        args: ["gitlab-k8s-runner-executor-namespace"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for k8s-metrics-server"
+        files: "^k8s-metrics-server/.+"
+        args: ["k8s-metrics-server"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for k8s-vault-client"
+        files: "^k8s-vault-client/.+"
+        args: ["k8s-vault-client"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for karpenter"
+        files: "^karpenter/.+"
+        args: ["karpenter"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for kube-prometheus-stack"
+        files: "^kube-prometheus-stack/.+"
+        args: ["kube-prometheus-stack"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for rds-postgres-instance"
+        files: "^rds-postgres-instance/.+"
+        args: ["rds-postgres-instance"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for s3-bucket"
+        files: "^s3-bucket/.+"
+        args: ["s3-bucket"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for sealed-secret"
+        files: "^sealed-secret/.+"
+        args: ["sealed-secret"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for sealed-secrets-controller"
+        files: "^sealed-secrets-controller/.+"
+        args: ["sealed-secrets-controller"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for sqs-queue"
+        files: "^sqs-queue/.+"
+        args: ["sqs-queue"]
+
+      - id: terraform-docs-system
+        name: "Run terraform-docs for velero"
+        files: "^velero/.+"
+        args: ["velero"]

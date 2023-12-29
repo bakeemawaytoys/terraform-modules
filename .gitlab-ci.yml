@@ -1,0 +1,127 @@
+---
+variables:
+    TFLINT_VERSION: v0.48.0
+
+.module-build:
+    stage: build
+    variables:
+        MODULE_NAME: $CI_JOB_NAME
+        MODULE_ROOT: $CI_JOB_NAME # The module root is the path to of the module's root directory relative to the project root.
+    trigger:
+        include:
+            - local: templates/module-pipeline.yml
+        strategy: depend
+    rules:
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+        - if: $CI_COMMIT_TAG
+          when: never
+        - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+          changes:
+              - $CI_JOB_NAME/**
+              - .gitlab-ci.yml
+              - templates/module-pipeline.yml
+
+# Warm the tflint plug-in cache to avoid Github rate limiting
+pre-warm the tflint plug-ins cache:
+    stage: .pre
+    image:
+        name: ghcr.io/terraform-linters/tflint:${TFLINT_VERSION}
+        entrypoint: [""]
+    script:
+        # Do not change the plugins directory without changing it in the tflint job as well.
+        - mkdir -p ".tflint.d/plugins"
+        - tflint --init
+    cache:
+        - key:
+              files:
+                  - .tflint.hcl
+          paths:
+              - .tflint.d/plugins/
+    rules:
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+        - if: $CI_COMMIT_TAG
+          when: never
+        - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# Child pipelines, one per module.  The name of the job must match the name of the module.
+
+aws-load-balancer-controller:
+    extends: .module-build
+
+bottlerocket-managed-node-group:
+    extends: .module-build
+
+cert-manager:
+    extends: .module-build
+
+eks-cloudwatch-container-insights:
+    extends: .module-build
+
+eks-cluster:
+    extends: .module-build
+
+eks-cluster-aws-auth:
+    extends: .module-build
+
+eks-ebs-csi-driver-managed-add-on:
+    extends: .module-build
+
+eks-fargate-profile:
+    extends: .module-build
+
+eks-iam-role-for-service-account:
+    extends: .module-build
+
+eks-vpc:
+    extends: .module-build
+
+elb-nginx-ingress-controller:
+    extends: .module-build
+
+flagger:
+    extends: .module-build
+
+gitlab-application-k8s-namespace:
+    extends: .module-build
+
+gitlab-application-vault-k8s-auth-role:
+    extends: .module-build
+
+gitlab-k8s-agent:
+    extends: .module-build
+
+gitlab-k8s-runner-executor:
+    extends: .module-build
+
+gitlab-k8s-runner-executor-namespace:
+    extends: .module-build
+
+k8s-metrics-server:
+    extends: .module-build
+
+k8s-vault-client:
+    extends: .module-build
+
+karpenter:
+    extends: .module-build
+
+kube-prometheus-stack:
+    extends: .module-build
+
+rds-postgres-instance:
+    extends: .module-build
+
+s3-bucket:
+    extends: .module-build
+
+sealed-secret:
+    extends: .module-build
+
+sealed-secrets-controller:
+    extends: .module-build
+
+sqs-queue:
+    extends: .module-build
+
+velero:
+    extends: .module-build

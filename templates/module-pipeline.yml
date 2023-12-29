@@ -1,0 +1,144 @@
+variables:
+  TERRAFORM_VERSION: "1.6"
+
+workflow:
+  name: $MODULE_NAME
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'parent_pipeline'
+      when: always
+
+terraform fmt:
+  stage: test
+  image:
+      name: "public.ecr.aws/hashicorp/terraform:${TERRAFORM_VERSION}"
+      entrypoint: [""]
+  script:
+      - terraform fmt -check -recursive -diff $MODULE_ROOT
+
+terraform validate:
+  stage: test
+  image:
+      name: "public.ecr.aws/hashicorp/terraform:${TERRAFORM_VERSION}"
+      entrypoint: [""]
+  script:
+    # Disable the use of any
+    - export GIT_CONFIG_NOSYSTEM=true
+    # Set the HOME variable to the project directory to avoid permissions issues.
+    - export HOME=$CI_PROJECT_DIR
+    # Rewrite any SSH module sources to HTTPS and use the job token for authentication to avoid the use of SSH keys
+    # See https://www.jvt.me/posts/2019/03/20/git-rewrite-url-https-ssh/ for more details
+    - git config --global "url.https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.com/.insteadOf" ssh://git@gitlab.com/
+    - terraform -chdir=$MODULE_ROOT init -backend=false
+    - terraform -chdir=$MODULE_ROOT validate
+
+tfsec:
+  stage: test
+  image: ghcr.io/aquasecurity/tfsec-ci:v1.28.4
+  script:
+    - tfsec --version
+    - tfsec --config-file tfsec.yml --include-ignored --include-passed  --format lovely,junit --out results $MODULE_ROOT
+  artifacts:
+    reports:
+      junit: "*junit*"
+
+tflint:
+  stage: test
+  image:
+    name: ghcr.io/terraform-linters/tflint:${TFLINT_VERSION}
+    entrypoint: [""]
+  variables:
+    # Use an absolue path for the plugins directory to ensure tflint uses the correct directory after changing into the module root directory
+    TFLINT_PLUGIN_DIR: "${CI_PROJECT_DIR}/.tflint.d/plugins"
+  before_script:
+    - mkdir -p $TFLINT_PLUGIN_DIR
+    # Change to the module's root so that the --recursive option can be used.  Changing to the module directory is necessary
+    # because the --chdir option cannot be used with --recursive (as of version 0.46)
+    - cd "${MODULE_ROOT}"
+    - tflint --config "${CI_PROJECT_DIR}/.tflint.hcl" --init
+  script:
+    - pwd
+    - tflint --config "${CI_PROJECT_DIR}/.tflint.hcl" --format junit --recursive > "${CI_PROJECT_DIR}/junit-root.xml"
+  artifacts:
+    reports:
+      junit: "junit*.xml"
+  cache:
+    - key:
+        files:
+          - .tflint.hcl
+      paths:
+        - .tflint.d/plugins/
+
+check for stale README file:
+  stage: test
+  image:
+    name: quay.io/terraform-docs/terraform-docs:0.16.0
+    entrypoint: []
+  script:
+    - cp "$MODULE_ROOT/README.md" "$MODULE_ROOT/README.md.orig"
+    - terraform-docs "$MODULE_ROOT"
+    - diff -s "$MODULE_ROOT/README.md" "$MODULE_ROOT/README.md.orig" || (printf "\e[31mThe module's README.md file is out of date.  Please run the following command from the project root to update it.\n\n\e[1m\e[93mterraform-docs %s\n\n\e[0m" "${MODULE_ROOT}" && return 1)
+
+.release-job:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never                                             # Do not run this job when a tag is created manually
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH             # Run this job when commits are pushed or merged to the default branch
+      changes:
+        - $MODULE_ROOT/VERSION
+
+prepare for release:
+  stage: deploy
+  extends: .release-job
+  image: public.ecr.aws/docker/library/alpine:3.17
+  script:
+    - VERSION="$(head $MODULE_ROOT/VERSION | tr -d ' ')"
+    - echo "VERSION=${VERSION}" >> variables.env
+    # Construct a string that matches the anchor Gitlab automatically generates for markdown header links. It will be used for links in the release description.  I'm not sure if this is documented anywhere so it might break at some point.
+    - CHANGELOG_ANCHOR="anchor-$(echo $VERSION | tr -d '.')"
+    - echo "CHANGELOG_ANCHOR=${CHANGELOG_ANCHOR}" >> variables.env
+    - TAG=${MODULE_NAME}-v${VERSION}
+    - echo "TAG=${TAG}" >> variables.env
+  artifacts:
+    reports:
+      dotenv: variables.env
+
+release:
+  stage: deploy
+  extends: .release-job
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs:
+    - job: "prepare for release"
+      artifacts: true
+  script:
+    - echo "running release_job for $TAG"
+  release:
+    name: '${MODULE_NAME} ${VERSION}'
+    description: |
+      # Version ${VERSION} of the ${MODULE_NAME} module.
+
+      * [CHANGELOG](${CI_PROJECT_URL}/-/tree/${TAG}/${MODULE_ROOT}/CHANGELOG.md#${CHANGELOG_ANCHOR})
+      * [README](${CI_PROJECT_URL}/-/tree/${TAG}/${MODULE_ROOT}/README.md)
+
+      # Usage
+
+      To use this version with **Git-over-SSH**, set the module source to the following URL.
+
+      > <git::ssh://git@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git//${MODULE_ROOT}?ref=${TAG}>
+
+      ~~~terraform
+      module \"ssh_example\" {
+        source = \"git::ssh://git@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git//${MODULE_ROOT}?ref=${TAG}\"
+      }
+      ~~~
+
+      To use this version with **Git-over-HTTPS**, set the module source to following URL.
+
+      > <git::${CI_PROJECT_URL}.git//${MODULE_ROOT}?ref=${TAG}>
+
+      ~~~terraform
+      module \"https_example\" {
+        source = \"git::${CI_PROJECT_URL}.git//${MODULE_ROOT}?ref=${TAG}\"
+      }
+      ~~~
+    tag_name: '$TAG'
+    ref: '$CI_COMMIT_SHA'
